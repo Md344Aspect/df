@@ -1,932 +1,748 @@
 --[[
-    AniLib - Professional Roblox UI Library
-    Dark theme with tabbed navigation, sections, and interactive components.
-    
-    Usage Example:
-    
-    local UILib = loadstring(game:HttpGet("..."))()  -- or require(script.UILib)
-    
-    local Window = UILib:CreateWindow({
-        Title = "My Script",
-        Size = UDim2.new(0, 620, 0, 440),
-    })
-    
-    local Tab = Window:AddTab("Aiming")
-    local Section = Tab:AddSection("Drawings")
-    Section:AddToggle("Watermark", false, function(val) print(val) end)
-    Section:AddSlider("Radius", 0, 200, 100, function(val) print(val) end)
-    Section:AddDropdown("Origin", {"mouse", "center", "crosshair"}, "mouse", function(val) print(val) end)
-    Section:AddKeybind("Zoom Keybind", Enum.KeyCode.F, function(key) print(key) end)
+╔══════════════════════════════════════════════════════════╗
+║           AniLib  –  Roblox UI Library v3.0              ║
+║  Blocky classic style. Multi-column section grid.        ║
+║  Fixed dropdowns (overlay portal, never clips).          ║
+╚══════════════════════════════════════════════════════════╝
+
+QUICK USAGE:
+    local Lib  = require(script.UILibrary)
+    local Win  = Lib:CreateWindow({ Title = "MyScript" })
+    local Tab  = Win:AddTab("Aiming")
+    local L    = Tab:AddSection("Left Section")          -- left column (default)
+    local R    = Tab:AddSection("Right Section", "right") -- right column
+
+    L:AddToggle    ("Watermark",  false,        function(v) end)
+    L:AddSlider    ("Radius",     0, 300, 100,  function(v) end)
+    L:AddDropdown  ("Origin",     {"mouse","center"}, "mouse", function(v) end)
+    L:AddKeybind   ("Hotkey",     Enum.KeyCode.F,     function(k) end)
+    L:AddButton    ("Click Me",   function() end)
+    L:AddInput     ("Name",       "placeholder",      function(v) end)
+    L:AddColorPicker("Color",     Color3.new(1,1,1),  function(c) end)
+    L:AddLabel     ("Some info text")
+    L:AddSeparator ()
 --]]
 
-local UILibrary = {}
-UILibrary.__index = UILibrary
-
--- ─── Services ───────────────────────────────────────────────────────────────
+-- ═══════════════════════════════════════════════════════════════════════════
+-- SERVICES
+-- ═══════════════════════════════════════════════════════════════════════════
 local Players          = game:GetService("Players")
-local RunService       = game:GetService("RunService")
 local TweenService     = game:GetService("TweenService")
 local UserInputService = game:GetService("UserInputService")
 local CoreGui          = game:GetService("CoreGui")
+local LocalPlayer      = Players.LocalPlayer
 
-local LocalPlayer = Players.LocalPlayer
-
--- ─── Constants ──────────────────────────────────────────────────────────────
-local COLORS = {
-    Background      = Color3.fromRGB(20, 20, 20),
-    Surface         = Color3.fromRGB(28, 28, 28),
-    SectionBg       = Color3.fromRGB(32, 32, 32),
-    Border          = Color3.fromRGB(50, 50, 50),
-    BorderLight     = Color3.fromRGB(60, 60, 60),
-    TabBar          = Color3.fromRGB(22, 22, 22),
-    TabActive       = Color3.fromRGB(28, 28, 28),
-    TabInactive     = Color3.fromRGB(22, 22, 22),
-    TabText         = Color3.fromRGB(180, 180, 180),
-    TabTextActive   = Color3.fromRGB(230, 230, 230),
-    TabUnderline    = Color3.fromRGB(255, 255, 255),
-    Text            = Color3.fromRGB(200, 200, 200),
-    TextDim         = Color3.fromRGB(130, 130, 130),
-    TextLabel       = Color3.fromRGB(160, 160, 160),
-    ToggleOn        = Color3.fromRGB(255, 255, 255),
-    ToggleOff       = Color3.fromRGB(55, 55, 55),
-    SliderFill      = Color3.fromRGB(255, 255, 255),
-    SliderBg        = Color3.fromRGB(45, 45, 45),
-    InputBg         = Color3.fromRGB(38, 38, 38),
-    InputBorder     = Color3.fromRGB(60, 60, 60),
-    TitleBar        = Color3.fromRGB(18, 18, 18),
-    TitleText       = Color3.fromRGB(200, 200, 200),
-    SectionTitle    = Color3.fromRGB(150, 150, 150),
-    PreviewBg       = Color3.fromRGB(15, 15, 15),
+-- ═══════════════════════════════════════════════════════════════════════════
+-- THEME  (all blocky – no UICorner anywhere)
+-- ═══════════════════════════════════════════════════════════════════════════
+local C = {
+    WindowBg      = Color3.fromRGB(22, 22, 22),
+    TitleBg       = Color3.fromRGB(16, 16, 16),
+    TitleText     = Color3.fromRGB(195, 195, 195),
+    SectionBg     = Color3.fromRGB(30, 30, 30),
+    SectionHdr    = Color3.fromRGB(24, 24, 24),
+    SectionTitle  = Color3.fromRGB(148, 148, 148),
+    SectionBorder = Color3.fromRGB(48, 48, 48),
+    Divider       = Color3.fromRGB(40, 40, 40),
+    TabBar        = Color3.fromRGB(18, 18, 18),
+    TabBorder     = Color3.fromRGB(45, 45, 45),
+    TabText       = Color3.fromRGB(155, 155, 155),
+    TabTextOn     = Color3.fromRGB(222, 222, 222),
+    TabUnderline  = Color3.fromRGB(205, 205, 205),
+    Text          = Color3.fromRGB(195, 195, 195),
+    TextDim       = Color3.fromRGB(110, 110, 110),
+    CheckOn       = Color3.fromRGB(210, 210, 210),
+    CheckOff      = Color3.fromRGB(48, 48, 48),
+    CheckBorder   = Color3.fromRGB(72, 72, 72),
+    SliderBg      = Color3.fromRGB(40, 40, 40),
+    SliderFill    = Color3.fromRGB(195, 195, 195),
+    SliderBorder  = Color3.fromRGB(58, 58, 58),
+    InputBg       = Color3.fromRGB(34, 34, 34),
+    InputBorder   = Color3.fromRGB(56, 56, 56),
+    InputBorderOn = Color3.fromRGB(115, 115, 115),
+    BtnBg         = Color3.fromRGB(34, 34, 34),
+    BtnHover      = Color3.fromRGB(44, 44, 44),
+    BtnBorder     = Color3.fromRGB(58, 58, 58),
+    DropBg        = Color3.fromRGB(28, 28, 28),
+    DropBorder    = Color3.fromRGB(55, 55, 55),
+    DropHover     = Color3.fromRGB(40, 40, 40),
+    DropActive    = Color3.fromRGB(48, 48, 48),
+    Separator     = Color3.fromRGB(40, 40, 40),
 }
 
-local FONTS = {
-    Regular = Enum.Font.Code,
-    Bold    = Enum.Font.Code,
-    Mono    = Enum.Font.Code,
-}
+local FONT      = Enum.Font.Code
+local FS        = 11   -- base font size
+local TI        = TweenInfo.new(0.12, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
 
-local TWEEN_INFO = TweenInfo.new(0.15, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+-- ═══════════════════════════════════════════════════════════════════════════
+-- UTILITIES
+-- ═══════════════════════════════════════════════════════════════════════════
+local U = {}
 
--- ─── Utility ────────────────────────────────────────────────────────────────
-local Util = {}
-
-function Util.Tween(instance, properties)
-    TweenService:Create(instance, TWEEN_INFO, properties):Play()
-end
-
-function Util.Create(class, properties, children)
-    local obj = Instance.new(class)
-    for k, v in pairs(properties or {}) do
-        obj[k] = v
+function U.New(cls, props)
+    local o = Instance.new(cls)
+    for k, v in pairs(props) do
+        if k ~= "Parent" then o[k] = v end
     end
-    for _, child in ipairs(children or {}) do
-        child.Parent = obj
-    end
-    return obj
+    if props.Parent then o.Parent = props.Parent end
+    return o
 end
 
-function Util.AddCorner(parent, radius)
-    return Util.Create("UICorner", { CornerRadius = UDim.new(0, radius or 3), Parent = parent })
+function U.Tween(obj, props) TweenService:Create(obj, TI, props):Play() end
+
+function U.Stroke(parent, color, thick)
+    return U.New("UIStroke", { Color = color or C.SectionBorder, Thickness = thick or 1, Parent = parent })
 end
 
-function Util.AddPadding(parent, top, right, bottom, left)
-    return Util.Create("UIPadding", {
-        PaddingTop    = UDim.new(0, top    or 6),
-        PaddingRight  = UDim.new(0, right  or 6),
-        PaddingBottom = UDim.new(0, bottom or 6),
-        PaddingLeft   = UDim.new(0, left   or 6),
-        Parent        = parent
+function U.Pad(parent, t, r, b, l)
+    return U.New("UIPadding", {
+        PaddingTop    = UDim.new(0, t or 0), PaddingRight  = UDim.new(0, r or 0),
+        PaddingBottom = UDim.new(0, b or 0), PaddingLeft   = UDim.new(0, l or 0),
+        Parent = parent,
     })
 end
 
-function Util.AddStroke(parent, color, thickness)
-    return Util.Create("UIStroke", {
-        Color     = color or COLORS.Border,
-        Thickness = thickness or 1,
-        Parent    = parent
-    })
-end
-
-function Util.AddListLayout(parent, direction, padding, hAlign)
-    return Util.Create("UIListLayout", {
-        FillDirection       = direction or Enum.FillDirection.Vertical,
-        Padding             = UDim.new(0, padding or 4),
+function U.List(parent, dir, gap, hAlign)
+    return U.New("UIListLayout", {
+        FillDirection       = dir   or Enum.FillDirection.Vertical,
+        Padding             = UDim.new(0, gap or 0),
         HorizontalAlignment = hAlign or Enum.HorizontalAlignment.Left,
         SortOrder           = Enum.SortOrder.LayoutOrder,
-        Parent              = parent
+        Parent              = parent,
     })
 end
 
-function Util.MakeDraggable(handle, frame)
-    local dragging, dragStart, startPos = false, nil, nil
-    handle.InputBegan:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 then
-            dragging = true
-            dragStart = input.Position
-            startPos  = frame.Position
+function U.Drag(handle, frame)
+    local active, ds, sp = false, nil, nil
+    handle.InputBegan:Connect(function(i)
+        if i.UserInputType == Enum.UserInputType.MouseButton1 then
+            active, ds, sp = true, i.Position, frame.Position
         end
     end)
-    UserInputService.InputChanged:Connect(function(input)
-        if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
-            local delta = input.Position - dragStart
-            frame.Position = UDim2.new(
-                startPos.X.Scale,
-                startPos.X.Offset + delta.X,
-                startPos.Y.Scale,
-                startPos.Y.Offset + delta.Y
-            )
+    UserInputService.InputChanged:Connect(function(i)
+        if active and i.UserInputType == Enum.UserInputType.MouseMovement then
+            local d = i.Position - ds
+            frame.Position = UDim2.new(sp.X.Scale, sp.X.Offset + d.X, sp.Y.Scale, sp.Y.Offset + d.Y)
         end
     end)
-    UserInputService.InputEnded:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 then
-            dragging = false
-        end
+    UserInputService.InputEnded:Connect(function(i)
+        if i.UserInputType == Enum.UserInputType.MouseButton1 then active = false end
     end)
 end
 
--- ─── Component Builders ─────────────────────────────────────────────────────
-local Component = {}
+-- ═══════════════════════════════════════════════════════════════════════════
+-- DROPDOWN OVERLAY MANAGER
+-- All dropdowns render into a shared transparent full-screen overlay frame
+-- at ZIndex 100, so they are NEVER clipped by their parent ScrollingFrame.
+-- ═══════════════════════════════════════════════════════════════════════════
+local DropMgr = { _overlay = nil, _open = nil }
 
--- Toggle
-function Component.Toggle(parent, label, default, callback)
-    local state = default or false
-    local row = Util.Create("Frame", {
-        Size            = UDim2.new(1, 0, 0, 20),
+function DropMgr:Init(overlay) self._overlay = overlay end
+
+function DropMgr:Close()
+    if self._open then
+        self._open.Visible = false
+        self._open = nil
+    end
+end
+
+function DropMgr:Open(dropFrame, absPos, absW, itemCount)
+    if self._open and self._open ~= dropFrame then
+        self._open.Visible = false
+    end
+    local ITEM_H   = 17
+    local MAX_SHOW = 7
+    local h        = math.min(itemCount, MAX_SHOW) * ITEM_H
+
+    dropFrame.Position = UDim2.new(0, absPos.X, 0, absPos.Y + 18 + 1)
+    dropFrame.Size     = UDim2.new(0, absW, 0, h)
+    dropFrame.Parent   = self._overlay
+    dropFrame.Visible  = true
+    self._open = dropFrame
+end
+
+-- Close on any click outside (deferred so button's own click resolves first)
+UserInputService.InputBegan:Connect(function(i)
+    if i.UserInputType == Enum.UserInputType.MouseButton1 and DropMgr._open then
+        task.defer(function() DropMgr:Close() end)
+    end
+end)
+
+-- ═══════════════════════════════════════════════════════════════════════════
+-- COMPONENTS
+-- ═══════════════════════════════════════════════════════════════════════════
+local Comp = {}
+
+-- ── Toggle ──────────────────────────────────────────────────────────────────
+function Comp.Toggle(parent, label, default, cb)
+    local state = default == true
+    local row = U.New("Frame", { Size = UDim2.new(1, 0, 0, 18), BackgroundTransparency = 1, Parent = parent })
+
+    local box = U.New("Frame", {
+        Size             = UDim2.new(0, 12, 0, 12),
+        Position         = UDim2.new(0, 0, 0.5, -6),
+        BackgroundColor3 = state and C.CheckOn or C.CheckOff,
+        BorderSizePixel  = 0,
+        Parent           = row,
+    })
+    U.Stroke(box, C.CheckBorder, 1)
+
+    local lbl = U.New("TextLabel", {
+        Size                   = UDim2.new(1, -18, 1, 0),
+        Position               = UDim2.new(0, 18, 0, 0),
         BackgroundTransparency = 1,
-        Parent          = parent,
-    })
-    local box = Util.Create("Frame", {
-        Size            = UDim2.new(0, 14, 0, 14),
-        Position        = UDim2.new(0, 0, 0.5, -7),
-        BackgroundColor3 = state and COLORS.ToggleOn or COLORS.ToggleOff,
-        Parent          = row,
-    })
-    Util.AddCorner(box, 2)
-    Util.AddStroke(box, COLORS.Border, 1)
-
-    local lbl = Util.Create("TextLabel", {
-        Size            = UDim2.new(1, -20, 1, 0),
-        Position        = UDim2.new(0, 20, 0, 0),
-        BackgroundTransparency = 1,
-        Text            = label,
-        TextColor3      = COLORS.Text,
-        TextSize        = 11,
-        Font            = FONTS.Regular,
-        TextXAlignment  = Enum.TextXAlignment.Left,
-        Parent          = row,
+        Text                   = label,
+        TextColor3             = C.Text,
+        TextSize               = FS,
+        Font                   = FONT,
+        TextXAlignment         = Enum.TextXAlignment.Left,
+        Parent                 = row,
     })
 
-    local btn = Util.Create("TextButton", {
-        Size               = UDim2.new(1, 0, 1, 0),
-        BackgroundTransparency = 1,
-        Text               = "",
-        Parent             = row,
-    })
-
+    local btn = U.New("TextButton", { Size = UDim2.new(1, 0, 1, 0), BackgroundTransparency = 1, Text = "", Parent = row })
     btn.MouseButton1Click:Connect(function()
         state = not state
-        Util.Tween(box, { BackgroundColor3 = state and COLORS.ToggleOn or COLORS.ToggleOff })
-        if callback then callback(state) end
+        U.Tween(box, { BackgroundColor3 = state and C.CheckOn or C.CheckOff })
+        if cb then cb(state) end
     end)
+    btn.MouseEnter:Connect(function() U.Tween(lbl, { TextColor3 = C.TabTextOn }) end)
+    btn.MouseLeave:Connect(function() U.Tween(lbl, { TextColor3 = C.Text     }) end)
 
-    btn.MouseEnter:Connect(function()
-        Util.Tween(lbl, { TextColor3 = COLORS.TabTextActive })
-    end)
-    btn.MouseLeave:Connect(function()
-        Util.Tween(lbl, { TextColor3 = COLORS.Text })
-    end)
-
-    return {
-        Set = function(val)
-            state = val
-            Util.Tween(box, { BackgroundColor3 = state and COLORS.ToggleOn or COLORS.ToggleOff })
-        end,
-        Get = function() return state end,
-    }
+    local api = {}
+    function api:Set(v) state = v; U.Tween(box, { BackgroundColor3 = state and C.CheckOn or C.CheckOff }) end
+    function api:Get() return state end
+    return api
 end
 
--- Slider
-function Component.Slider(parent, label, min, max, default, callback)
+-- ── Slider ───────────────────────────────────────────────────────────────────
+function Comp.Slider(parent, label, min, max, default, cb)
     local value = math.clamp(default or min, min, max)
-    local dragging = false
+    local held  = false
 
-    local container = Util.Create("Frame", {
-        Size            = UDim2.new(1, 0, 0, 36),
-        BackgroundTransparency = 1,
-        Parent          = parent,
-    })
+    local wrap = U.New("Frame", { Size = UDim2.new(1, 0, 0, 30), BackgroundTransparency = 1, Parent = parent })
 
-    local labelRow = Util.Create("Frame", {
-        Size            = UDim2.new(1, 0, 0, 14),
-        BackgroundTransparency = 1,
-        Parent          = container,
+    local topRow = U.New("Frame", { Size = UDim2.new(1, 0, 0, 13), BackgroundTransparency = 1, Parent = wrap })
+    U.New("TextLabel", {
+        Size = UDim2.new(0.7, 0, 1, 0), BackgroundTransparency = 1,
+        Text = label, TextColor3 = C.Text, TextSize = FS, Font = FONT,
+        TextXAlignment = Enum.TextXAlignment.Left, Parent = topRow,
     })
-    local lbl = Util.Create("TextLabel", {
-        Size            = UDim2.new(0.5, 0, 1, 0),
-        BackgroundTransparency = 1,
-        Text            = label,
-        TextColor3      = COLORS.Text,
-        TextSize        = 11,
-        Font            = FONTS.Regular,
-        TextXAlignment  = Enum.TextXAlignment.Left,
-        Parent          = labelRow,
-    })
-    local valueLbl = Util.Create("TextLabel", {
-        Size            = UDim2.new(0.5, 0, 1, 0),
-        Position        = UDim2.new(0.5, 0, 0, 0),
-        BackgroundTransparency = 1,
-        Text            = tostring(value),
-        TextColor3      = COLORS.TextDim,
-        TextSize        = 11,
-        Font            = FONTS.Mono,
-        TextXAlignment  = Enum.TextXAlignment.Right,
-        Parent          = labelRow,
+    local valLbl = U.New("TextLabel", {
+        Size = UDim2.new(0.3, 0, 1, 0), Position = UDim2.new(0.7, 0, 0, 0), BackgroundTransparency = 1,
+        Text = tostring(value), TextColor3 = C.TextDim, TextSize = FS, Font = FONT,
+        TextXAlignment = Enum.TextXAlignment.Right, Parent = topRow,
     })
 
-    local track = Util.Create("Frame", {
-        Size            = UDim2.new(1, 0, 0, 6),
-        Position        = UDim2.new(0, 0, 0, 18),
-        BackgroundColor3 = COLORS.SliderBg,
-        Parent          = container,
+    local track = U.New("Frame", {
+        Size = UDim2.new(1, 0, 0, 5), Position = UDim2.new(0, 0, 0, 16),
+        BackgroundColor3 = C.SliderBg, BorderSizePixel = 0, Parent = wrap,
     })
-    Util.AddCorner(track, 3)
-
-    local fill = Util.Create("Frame", {
-        Size            = UDim2.new((value - min) / (max - min), 0, 1, 0),
-        BackgroundColor3 = COLORS.SliderFill,
-        Parent          = track,
+    U.Stroke(track, C.SliderBorder, 1)
+    local fill = U.New("Frame", {
+        Size             = UDim2.new((value - min) / math.max(max - min, 1), 0, 1, 0),
+        BackgroundColor3 = C.SliderFill, BorderSizePixel = 0, Parent = track,
     })
-    Util.AddCorner(fill, 3)
 
-    local function updateValue(absX)
-        local trackAbs = track.AbsolutePosition.X
-        local trackW   = track.AbsoluteSize.X
-        local ratio    = math.clamp((absX - trackAbs) / trackW, 0, 1)
-        value = math.floor(min + ratio * (max - min) + 0.5)
-        fill.Size = UDim2.new(ratio, 0, 1, 0)
-        valueLbl.Text = tostring(value)
-        if callback then callback(value) end
+    local function setVal(absX)
+        local rx    = math.clamp((absX - track.AbsolutePosition.X) / math.max(track.AbsoluteSize.X, 1), 0, 1)
+        value       = math.floor(min + rx * (max - min) + 0.5)
+        fill.Size   = UDim2.new(rx, 0, 1, 0)
+        valLbl.Text = tostring(value)
+        if cb then cb(value) end
     end
 
-    local inputCapture = Util.Create("TextButton", {
-        Size               = UDim2.new(1, 0, 1, 0),
-        Position           = UDim2.new(0, 0, 0, 14),
-        BackgroundTransparency = 1,
-        Text               = "",
-        Parent             = container,
+    local hit = U.New("TextButton", {
+        Size = UDim2.new(1, 0, 0, 14), Position = UDim2.new(0, 0, 0, 13),
+        BackgroundTransparency = 1, Text = "", Parent = wrap,
     })
-
-    inputCapture.InputBegan:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 then
-            dragging = true
-            updateValue(input.Position.X)
-        end
+    hit.InputBegan:Connect(function(i)
+        if i.UserInputType == Enum.UserInputType.MouseButton1 then held = true; setVal(i.Position.X) end
     end)
-    UserInputService.InputChanged:Connect(function(input)
-        if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
-            updateValue(input.Position.X)
-        end
+    UserInputService.InputChanged:Connect(function(i)
+        if held and i.UserInputType == Enum.UserInputType.MouseMovement then setVal(i.Position.X) end
     end)
-    UserInputService.InputEnded:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 then
-            dragging = false
-        end
+    UserInputService.InputEnded:Connect(function(i)
+        if i.UserInputType == Enum.UserInputType.MouseButton1 then held = false end
     end)
 
-    return {
-        Set = function(val)
-            value = math.clamp(val, min, max)
-            local ratio = (value - min) / (max - min)
-            fill.Size = UDim2.new(ratio, 0, 1, 0)
-            valueLbl.Text = tostring(value)
-        end,
-        Get = function() return value end,
-    }
+    local api = {}
+    function api:Set(v)
+        value = math.clamp(v, min, max)
+        fill.Size = UDim2.new((value - min) / math.max(max - min, 1), 0, 1, 0)
+        valLbl.Text = tostring(value)
+    end
+    function api:Get() return value end
+    return api
 end
 
--- Dropdown
-function Component.Dropdown(parent, label, options, default, callback)
-    local selected = default or (options[1] or "")
-    local open = false
+-- ── Dropdown ──────────────────────────────────────────────────────────────────
+function Comp.Dropdown(parent, label, options, default, cb)
+    local selected = default or (options and options[1]) or ""
+    local isOpen   = false
+    local ITEM_H   = 17
 
-    local container = Util.Create("Frame", {
-        Size            = UDim2.new(1, 0, 0, 20),
-        BackgroundTransparency = 1,
-        ClipsDescendants = false,
-        Parent          = parent,
+    local wrap = U.New("Frame", {
+        Size = UDim2.new(1, 0, 0, 18), BackgroundTransparency = 1,
+        ClipsDescendants = false, Parent = parent,
     })
 
-    local row = Util.Create("Frame", {
-        Size            = UDim2.new(1, 0, 1, 0),
-        BackgroundTransparency = 1,
-        Parent          = container,
+    U.New("TextLabel", {
+        Size = UDim2.new(0.42, -3, 1, 0), BackgroundTransparency = 1,
+        Text = label, TextColor3 = C.Text, TextSize = FS, Font = FONT,
+        TextXAlignment = Enum.TextXAlignment.Left, Parent = wrap,
     })
 
-    local lbl = Util.Create("TextLabel", {
-        Size            = UDim2.new(0.45, 0, 1, 0),
-        BackgroundTransparency = 1,
-        Text            = label,
-        TextColor3      = COLORS.Text,
-        TextSize        = 11,
-        Font            = FONTS.Regular,
-        TextXAlignment  = Enum.TextXAlignment.Left,
-        Parent          = row,
+    local btnFrame = U.New("Frame", {
+        Size = UDim2.new(0.58, 0, 1, 0), Position = UDim2.new(0.42, 0, 0, 0),
+        BackgroundColor3 = C.InputBg, BorderSizePixel = 0, Parent = wrap,
+    })
+    U.Stroke(btnFrame, C.InputBorder, 1)
+
+    local selLbl = U.New("TextLabel", {
+        Size = UDim2.new(1, -16, 1, 0), Position = UDim2.new(0, 4, 0, 0),
+        BackgroundTransparency = 1, Text = selected,
+        TextColor3 = C.Text, TextSize = FS, Font = FONT,
+        TextXAlignment = Enum.TextXAlignment.Left, Parent = btnFrame,
+    })
+    U.New("TextLabel", {   -- ▾ arrow
+        Size = UDim2.new(0, 14, 1, 0), Position = UDim2.new(1, -14, 0, 0),
+        BackgroundTransparency = 1, Text = "v", TextColor3 = C.TextDim, TextSize = 9, Font = FONT,
+        Parent = btnFrame,
     })
 
-    local btn = Util.Create("TextButton", {
-        Size            = UDim2.new(0.55, 0, 1, 0),
-        Position        = UDim2.new(0.45, 0, 0, 0),
-        BackgroundColor3 = COLORS.InputBg,
-        Text            = selected,
-        TextColor3      = COLORS.Text,
-        TextSize        = 11,
-        Font            = FONTS.Regular,
-        Parent          = row,
+    -- Build dropdown list frame (no parent yet – DropMgr assigns it)
+    local dropFrame = U.New("Frame", {
+        BackgroundColor3 = C.DropBg, BorderSizePixel = 0,
+        Visible = false, ZIndex = 100, ClipsDescendants = true,
+        Size = UDim2.new(0, 10, 0, 10), -- placeholder, DropMgr sets real size
     })
-    Util.AddCorner(btn, 2)
-    Util.AddStroke(btn, COLORS.InputBorder)
+    U.Stroke(dropFrame, C.DropBorder, 1)
 
-    local dropdownFrame = Util.Create("Frame", {
-        Size            = UDim2.new(0.55, 0, 0, 0),
-        Position        = UDim2.new(0.45, 0, 1, 2),
-        BackgroundColor3 = COLORS.SectionBg,
-        ZIndex          = 10,
-        ClipsDescendants = true,
-        Visible         = false,
-        Parent          = container,
+    local inner = U.New("ScrollingFrame", {
+        Size = UDim2.new(1, 0, 1, 0), BackgroundTransparency = 1,
+        BorderSizePixel = 0, ScrollBarThickness = 2,
+        ScrollBarImageColor3 = C.SectionBorder,
+        CanvasSize = UDim2.new(0, 0, 0, 0), AutomaticCanvasSize = Enum.AutomaticSize.Y,
+        ZIndex = 100, Parent = dropFrame,
     })
-    Util.AddCorner(dropdownFrame, 3)
-    Util.AddStroke(dropdownFrame, COLORS.Border)
+    U.List(inner, Enum.FillDirection.Vertical, 0)
 
-    local listLayout = Util.AddListLayout(dropdownFrame, Enum.FillDirection.Vertical, 0)
-
-    for _, option in ipairs(options) do
-        local optBtn = Util.Create("TextButton", {
-            Size            = UDim2.new(1, 0, 0, 18),
-            BackgroundTransparency = 1,
-            Text            = option,
-            TextColor3      = COLORS.Text,
-            TextSize        = 11,
-            Font            = FONTS.Regular,
-            ZIndex          = 11,
-            Parent          = dropdownFrame,
+    for _, opt in ipairs(options or {}) do
+        local isSel = (opt == selected)
+        local optBtn = U.New("TextButton", {
+            Size = UDim2.new(1, 0, 0, ITEM_H),
+            BackgroundColor3 = isSel and C.DropActive or C.DropBg,
+            BackgroundTransparency = isSel and 0 or 1,
+            BorderSizePixel = 0,
+            Text = opt, TextColor3 = C.Text, TextSize = FS, Font = FONT,
+            TextXAlignment = Enum.TextXAlignment.Left,
+            ZIndex = 101, Parent = inner,
         })
+        U.Pad(optBtn, 0, 0, 0, 5)
         optBtn.MouseEnter:Connect(function()
-            Util.Tween(optBtn, { BackgroundTransparency = 0, BackgroundColor3 = COLORS.Border })
+            if opt ~= selected then U.Tween(optBtn, { BackgroundColor3 = C.DropHover, BackgroundTransparency = 0 }) end
         end)
         optBtn.MouseLeave:Connect(function()
-            Util.Tween(optBtn, { BackgroundTransparency = 1 })
+            if opt ~= selected then U.Tween(optBtn, { BackgroundTransparency = 1 }) end
         end)
         optBtn.MouseButton1Click:Connect(function()
-            selected = option
-            btn.Text = option
-            open = false
-            Util.Tween(dropdownFrame, { Size = UDim2.new(0.55, 0, 0, 0) })
-            task.delay(0.15, function() dropdownFrame.Visible = false end)
-            if callback then callback(selected) end
+            selected    = opt
+            selLbl.Text = opt
+            isOpen      = false
+            DropMgr:Close()
+            if cb then cb(selected) end
         end)
     end
 
-    btn.MouseButton1Click:Connect(function()
-        open = not open
-        if open then
-            dropdownFrame.Visible = true
-            local targetH = math.min(#options * 18, 120)
-            Util.Tween(dropdownFrame, { Size = UDim2.new(0.55, 0, 0, targetH) })
-            container.Size = UDim2.new(1, 0, 0, 20 + targetH + 4)
+    -- Toggle button
+    local toggleBtn = U.New("TextButton", {
+        Size = UDim2.new(1, 0, 1, 0), BackgroundTransparency = 1, Text = "", ZIndex = 2, Parent = btnFrame,
+    })
+    toggleBtn.MouseButton1Click:Connect(function()
+        isOpen = not isOpen
+        if isOpen then
+            DropMgr:Open(dropFrame, btnFrame.AbsolutePosition, btnFrame.AbsoluteSize.X, #options)
         else
-            Util.Tween(dropdownFrame, { Size = UDim2.new(0.55, 0, 0, 0) })
-            task.delay(0.15, function()
-                dropdownFrame.Visible = false
-                container.Size = UDim2.new(1, 0, 0, 20)
-            end)
+            DropMgr:Close()
         end
     end)
+    -- sync local flag when manager closes externally
+    dropFrame:GetPropertyChangedSignal("Visible"):Connect(function()
+        if not dropFrame.Visible then isOpen = false end
+    end)
 
-    return {
-        Set = function(val) selected = val; btn.Text = val end,
-        Get = function() return selected end,
-    }
+    local api = {}
+    function api:Set(v) selected = v; selLbl.Text = v end
+    function api:Get() return selected end
+    return api
 end
 
--- TextInput
-function Component.TextInput(parent, label, placeholder, callback)
-    local container = Util.Create("Frame", {
-        Size            = UDim2.new(1, 0, 0, 20),
-        BackgroundTransparency = 1,
-        Parent          = parent,
-    })
-    local lbl = Util.Create("TextLabel", {
-        Size            = UDim2.new(0.45, 0, 1, 0),
-        BackgroundTransparency = 1,
-        Text            = label,
-        TextColor3      = COLORS.Text,
-        TextSize        = 11,
-        Font            = FONTS.Regular,
-        TextXAlignment  = Enum.TextXAlignment.Left,
-        Parent          = container,
-    })
-    local box = Util.Create("TextBox", {
-        Size            = UDim2.new(0.55, 0, 1, 0),
-        Position        = UDim2.new(0.45, 0, 0, 0),
-        BackgroundColor3 = COLORS.InputBg,
-        Text            = "",
-        PlaceholderText = placeholder or "",
-        PlaceholderColor3 = COLORS.TextDim,
-        TextColor3      = COLORS.Text,
-        TextSize        = 11,
-        Font            = FONTS.Regular,
-        ClearTextOnFocus = false,
-        Parent          = container,
-    })
-    Util.AddCorner(box, 2)
-    Util.AddStroke(box, COLORS.InputBorder)
-    Util.Create("UIPadding", { PaddingLeft = UDim.new(0, 5), Parent = box })
+-- ── TextInput ─────────────────────────────────────────────────────────────────
+function Comp.Input(parent, label, placeholder, cb)
+    local wrap = U.New("Frame", { Size = UDim2.new(1, 0, 0, 18), BackgroundTransparency = 1, Parent = parent })
 
+    U.New("TextLabel", {
+        Size = UDim2.new(0.42, -3, 1, 0), BackgroundTransparency = 1,
+        Text = label, TextColor3 = C.Text, TextSize = FS, Font = FONT,
+        TextXAlignment = Enum.TextXAlignment.Left, Parent = wrap,
+    })
+    local boxFrame = U.New("Frame", {
+        Size = UDim2.new(0.58, 0, 1, 0), Position = UDim2.new(0.42, 0, 0, 0),
+        BackgroundColor3 = C.InputBg, BorderSizePixel = 0, Parent = wrap,
+    })
+    local stroke = U.Stroke(boxFrame, C.InputBorder, 1)
+    local box = U.New("TextBox", {
+        Size = UDim2.new(1, -8, 1, 0), Position = UDim2.new(0, 4, 0, 0),
+        BackgroundTransparency = 1, PlaceholderText = placeholder or "",
+        PlaceholderColor3 = C.TextDim, Text = "",
+        TextColor3 = C.Text, TextSize = FS, Font = FONT,
+        TextXAlignment = Enum.TextXAlignment.Left, ClearTextOnFocus = false,
+        Parent = boxFrame,
+    })
+    box.Focused:Connect(function()   U.Tween(stroke, { Color = C.InputBorderOn }) end)
     box.FocusLost:Connect(function(enter)
-        if callback then callback(box.Text, enter) end
-    end)
-    box.Focused:Connect(function()
-        Util.Tween(box, { BackgroundColor3 = Color3.fromRGB(42, 42, 42) })
-    end)
-    box.FocusLost:Connect(function()
-        Util.Tween(box, { BackgroundColor3 = COLORS.InputBg })
+        U.Tween(stroke, { Color = C.InputBorder })
+        if cb then cb(box.Text, enter) end
     end)
 
-    return {
-        Set = function(val) box.Text = val end,
-        Get = function() return box.Text end,
-    }
+    local api = {}
+    function api:Set(v) box.Text = v end
+    function api:Get() return box.Text end
+    return api
 end
 
--- Keybind
-function Component.Keybind(parent, label, default, callback)
-    local key = default or Enum.KeyCode.Unknown
+-- ── Keybind ───────────────────────────────────────────────────────────────────
+function Comp.Keybind(parent, label, default, cb)
+    local key       = default or Enum.KeyCode.Unknown
     local listening = false
 
-    local container = Util.Create("Frame", {
-        Size            = UDim2.new(1, 0, 0, 20),
-        BackgroundTransparency = 1,
-        Parent          = parent,
+    local wrap = U.New("Frame", { Size = UDim2.new(1, 0, 0, 18), BackgroundTransparency = 1, Parent = parent })
+    U.New("TextLabel", {
+        Size = UDim2.new(0.6, -3, 1, 0), BackgroundTransparency = 1,
+        Text = label, TextColor3 = C.Text, TextSize = FS, Font = FONT,
+        TextXAlignment = Enum.TextXAlignment.Left, Parent = wrap,
     })
-    local lbl = Util.Create("TextLabel", {
-        Size            = UDim2.new(0.6, 0, 1, 0),
-        BackgroundTransparency = 1,
-        Text            = label,
-        TextColor3      = COLORS.Text,
-        TextSize        = 11,
-        Font            = FONTS.Regular,
-        TextXAlignment  = Enum.TextXAlignment.Left,
-        Parent          = container,
+    local kbFrame = U.New("Frame", {
+        Size = UDim2.new(0.4, 0, 1, 0), Position = UDim2.new(0.6, 0, 0, 0),
+        BackgroundColor3 = C.InputBg, BorderSizePixel = 0, Parent = wrap,
     })
-    local btn = Util.Create("TextButton", {
-        Size            = UDim2.new(0.4, 0, 1, 0),
-        Position        = UDim2.new(0.6, 0, 0, 0),
-        BackgroundColor3 = COLORS.InputBg,
-        Text            = key.Name,
-        TextColor3      = COLORS.Text,
-        TextSize        = 11,
-        Font            = FONTS.Mono,
-        Parent          = container,
+    U.Stroke(kbFrame, C.InputBorder, 1)
+    local kbLbl = U.New("TextLabel", {
+        Size = UDim2.new(1, 0, 1, 0), BackgroundTransparency = 1,
+        Text = key == Enum.KeyCode.Unknown and "NONE" or key.Name,
+        TextColor3 = C.TextDim, TextSize = FS, Font = FONT, Parent = kbFrame,
     })
-    Util.AddCorner(btn, 2)
-    Util.AddStroke(btn, COLORS.InputBorder)
+    local kbBtn = U.New("TextButton", { Size = UDim2.new(1, 0, 1, 0), BackgroundTransparency = 1, Text = "", Parent = kbFrame })
 
-    btn.MouseButton1Click:Connect(function()
-        listening = true
-        btn.Text = "..."
-        btn.TextColor3 = COLORS.TextDim
+    kbBtn.MouseButton1Click:Connect(function()
+        listening   = true
+        kbLbl.Text  = "..."
+        U.Tween(kbLbl, { TextColor3 = C.Text })
+    end)
+    UserInputService.InputBegan:Connect(function(input)
+        if not listening then return end
+        if input.UserInputType == Enum.UserInputType.Keyboard then
+            key = input.KeyCode; kbLbl.Text = key.Name
+        elseif input.UserInputType == Enum.UserInputType.MouseButton2 then
+            kbLbl.Text = "MB2"
+        else return end
+        listening = false
+        U.Tween(kbLbl, { TextColor3 = C.TextDim })
+        if cb then cb(key) end
     end)
 
-    UserInputService.InputBegan:Connect(function(input, gpe)
-        if listening then
-            if input.UserInputType == Enum.UserInputType.Keyboard then
-                key = input.KeyCode
-                btn.Text = key.Name
-                btn.TextColor3 = COLORS.Text
-                listening = false
-                if callback then callback(key) end
-            elseif input.UserInputType == Enum.UserInputType.MouseButton2 then
-                key = Enum.KeyCode.Unknown
-                btn.Text = "MB2"
-                btn.TextColor3 = COLORS.Text
-                listening = false
-                if callback then callback(key) end
-            end
-        end
-    end)
-
-    return {
-        Set = function(k) key = k; btn.Text = k.Name end,
-        Get = function() return key end,
-    }
+    local api = {}
+    function api:Set(k) key = k; kbLbl.Text = k.Name end
+    function api:Get() return key end
+    return api
 end
 
--- Button
-function Component.Button(parent, label, callback)
-    local btn = Util.Create("TextButton", {
-        Size            = UDim2.new(1, 0, 0, 22),
-        BackgroundColor3 = COLORS.InputBg,
-        Text            = label,
-        TextColor3      = COLORS.Text,
-        TextSize        = 11,
-        Font            = FONTS.Regular,
-        Parent          = parent,
+-- ── Button ────────────────────────────────────────────────────────────────────
+function Comp.Button(parent, label, cb)
+    local btn = U.New("TextButton", {
+        Size = UDim2.new(1, 0, 0, 20), BackgroundColor3 = C.BtnBg, BorderSizePixel = 0,
+        Text = label, TextColor3 = C.Text, TextSize = FS, Font = FONT, Parent = parent,
     })
-    Util.AddCorner(btn, 3)
-    Util.AddStroke(btn, COLORS.Border)
-
-    btn.MouseEnter:Connect(function()
-        Util.Tween(btn, { BackgroundColor3 = Color3.fromRGB(48, 48, 48) })
-    end)
-    btn.MouseLeave:Connect(function()
-        Util.Tween(btn, { BackgroundColor3 = COLORS.InputBg })
-    end)
+    U.Stroke(btn, C.BtnBorder, 1)
+    btn.MouseEnter:Connect(function()  U.Tween(btn, { BackgroundColor3 = C.BtnHover }) end)
+    btn.MouseLeave:Connect(function()  U.Tween(btn, { BackgroundColor3 = C.BtnBg   }) end)
     btn.MouseButton1Click:Connect(function()
-        Util.Tween(btn, { BackgroundColor3 = Color3.fromRGB(58, 58, 58) })
-        task.delay(0.1, function()
-            Util.Tween(btn, { BackgroundColor3 = COLORS.InputBg })
-        end)
-        if callback then callback() end
+        U.Tween(btn, { BackgroundColor3 = Color3.fromRGB(52, 52, 52) })
+        task.delay(0.1, function() U.Tween(btn, { BackgroundColor3 = C.BtnBg }) end)
+        if cb then cb() end
     end)
-
     return btn
 end
 
--- Label / Separator
-function Component.Label(parent, text)
-    return Util.Create("TextLabel", {
-        Size            = UDim2.new(1, 0, 0, 16),
-        BackgroundTransparency = 1,
-        Text            = text,
-        TextColor3      = COLORS.TextDim,
-        TextSize        = 10,
-        Font            = FONTS.Regular,
-        TextXAlignment  = Enum.TextXAlignment.Left,
-        Parent          = parent,
+-- ── Label ─────────────────────────────────────────────────────────────────────
+function Comp.Label(parent, text)
+    return U.New("TextLabel", {
+        Size = UDim2.new(1, 0, 0, 13), BackgroundTransparency = 1,
+        Text = text, TextColor3 = C.TextDim, TextSize = 10, Font = FONT,
+        TextXAlignment = Enum.TextXAlignment.Left, Parent = parent,
     })
 end
 
--- ColorPicker (basic)
-function Component.ColorPicker(parent, label, default, callback)
-    local color = default or Color3.fromRGB(255, 255, 255)
-    local container = Util.Create("Frame", {
-        Size            = UDim2.new(1, 0, 0, 20),
-        BackgroundTransparency = 1,
-        Parent          = parent,
+-- ── ColorPicker (swatch display) ─────────────────────────────────────────────
+function Comp.ColorPicker(parent, label, default, cb)
+    local color = default or Color3.new(1, 1, 1)
+    local wrap = U.New("Frame", { Size = UDim2.new(1, 0, 0, 18), BackgroundTransparency = 1, Parent = parent })
+    U.New("TextLabel", {
+        Size = UDim2.new(0.72, -3, 1, 0), BackgroundTransparency = 1,
+        Text = label, TextColor3 = C.Text, TextSize = FS, Font = FONT,
+        TextXAlignment = Enum.TextXAlignment.Left, Parent = wrap,
     })
-    local lbl = Util.Create("TextLabel", {
-        Size            = UDim2.new(0.7, 0, 1, 0),
-        BackgroundTransparency = 1,
-        Text            = label,
-        TextColor3      = COLORS.Text,
-        TextSize        = 11,
-        Font            = FONTS.Regular,
-        TextXAlignment  = Enum.TextXAlignment.Left,
-        Parent          = container,
+    local swatch = U.New("Frame", {
+        Size = UDim2.new(0.28, 0, 0, 14), Position = UDim2.new(0.72, 0, 0.5, -7),
+        BackgroundColor3 = color, BorderSizePixel = 0, Parent = wrap,
     })
-    local swatch = Util.Create("Frame", {
-        Size            = UDim2.new(0, 30, 0, 14),
-        Position        = UDim2.new(1, -30, 0.5, -7),
-        BackgroundColor3 = color,
-        Parent          = container,
-    })
-    Util.AddCorner(swatch, 2)
-    Util.AddStroke(swatch, COLORS.Border)
-
-    return {
-        Set = function(c) color = c; swatch.BackgroundColor3 = c end,
-        Get = function() return color end,
-    }
+    U.Stroke(swatch, C.InputBorder, 1)
+    local api = {}
+    function api:Set(c) color = c; swatch.BackgroundColor3 = c end
+    function api:Get() return color end
+    return api
 end
 
--- ─── Section ────────────────────────────────────────────────────────────────
+-- ── Separator ─────────────────────────────────────────────────────────────────
+function Comp.Separator(parent)
+    return U.New("Frame", { Size = UDim2.new(1, 0, 0, 1), BackgroundColor3 = C.Separator, BorderSizePixel = 0, Parent = parent })
+end
+
+-- ═══════════════════════════════════════════════════════════════════════════
+-- SECTION
+-- ═══════════════════════════════════════════════════════════════════════════
 local Section = {}
 Section.__index = Section
 
 function Section.new(parent, title)
     local self = setmetatable({}, Section)
 
-    self.Frame = Util.Create("Frame", {
-        Size            = UDim2.new(1, -10, 0, 0),
-        AutomaticSize   = Enum.AutomaticSize.Y,
-        BackgroundColor3 = COLORS.SectionBg,
-        Parent          = parent,
+    self.Frame = U.New("Frame", {
+        Size = UDim2.new(1, 0, 0, 0), AutomaticSize = Enum.AutomaticSize.Y,
+        BackgroundColor3 = C.SectionBg, BorderSizePixel = 0, Parent = parent,
     })
-    Util.AddCorner(self.Frame, 4)
-    Util.AddStroke(self.Frame, COLORS.Border)
+    U.Stroke(self.Frame, C.SectionBorder, 1)
 
-    local inner = Util.Create("Frame", {
-        Size            = UDim2.new(1, 0, 1, 0),
-        AutomaticSize   = Enum.AutomaticSize.Y,
-        BackgroundTransparency = 1,
-        Parent          = self.Frame,
-    })
-    Util.AddPadding(inner, 8, 10, 8, 10)
-    self._layout = Util.AddListLayout(inner, Enum.FillDirection.Vertical, 6)
-    self._inner = inner
-
-    if title and title ~= "" then
-        local titleLbl = Util.Create("TextLabel", {
-            Size            = UDim2.new(1, 0, 0, 14),
-            BackgroundTransparency = 1,
-            Text            = title,
-            TextColor3      = COLORS.SectionTitle,
-            TextSize        = 10,
-            Font            = FONTS.Regular,
-            TextXAlignment  = Enum.TextXAlignment.Center,
-            LayoutOrder     = -1,
-            Parent          = inner,
+    -- Title header bar
+    if title and #title > 0 then
+        local hdr = U.New("Frame", {
+            Size = UDim2.new(1, 0, 0, 18), BackgroundColor3 = C.SectionHdr, BorderSizePixel = 0, Parent = self.Frame,
         })
-        -- Subtle separator line
-        local sep = Util.Create("Frame", {
-            Size            = UDim2.new(1, 0, 0, 1),
-            BackgroundColor3 = COLORS.Border,
-            BorderSizePixel = 0,
-            LayoutOrder     = 0,
-            Parent          = inner,
+        U.New("TextLabel", {
+            Size = UDim2.new(1, 0, 1, 0), BackgroundTransparency = 1,
+            Text = title, TextColor3 = C.SectionTitle, TextSize = FS, Font = FONT, Parent = hdr,
+        })
+        U.New("Frame", {   -- bottom border of header
+            Size = UDim2.new(1, 0, 0, 1), Position = UDim2.new(0, 0, 1, -1),
+            BackgroundColor3 = C.SectionBorder, BorderSizePixel = 0, Parent = hdr,
         })
     end
 
+    local TITLE_H = (title and #title > 0) and 18 or 0
+    local content = U.New("Frame", {
+        Size = UDim2.new(1, 0, 0, 0), AutomaticSize = Enum.AutomaticSize.Y,
+        Position = UDim2.new(0, 0, 0, TITLE_H),
+        BackgroundTransparency = 1, Parent = self.Frame,
+    })
+    U.Pad(content, 5, 7, 6, 7)
+    U.List(content, Enum.FillDirection.Vertical, 5)
+    self._c = content
     return self
 end
 
-function Section:AddToggle(label, default, callback)
-    return Component.Toggle(self._inner, label, default, callback)
-end
+function Section:AddToggle    (label, def, cb)       return Comp.Toggle(self._c, label, def, cb) end
+function Section:AddSlider    (label, mn, mx, def, cb) return Comp.Slider(self._c, label, mn, mx, def, cb) end
+function Section:AddDropdown  (label, opts, def, cb) return Comp.Dropdown(self._c, label, opts, def, cb) end
+function Section:AddInput     (label, ph, cb)        return Comp.Input(self._c, label, ph, cb) end
+function Section:AddKeybind   (label, def, cb)       return Comp.Keybind(self._c, label, def, cb) end
+function Section:AddButton    (label, cb)            return Comp.Button(self._c, label, cb) end
+function Section:AddLabel     (text)                 return Comp.Label(self._c, text) end
+function Section:AddColorPicker(label, def, cb)      return Comp.ColorPicker(self._c, label, def, cb) end
+function Section:AddSeparator ()                     return Comp.Separator(self._c) end
 
-function Section:AddSlider(label, min, max, default, callback)
-    return Component.Slider(self._inner, label, min, max, default, callback)
-end
-
-function Section:AddDropdown(label, options, default, callback)
-    return Component.Dropdown(self._inner, label, options, default, callback)
-end
-
-function Section:AddTextInput(label, placeholder, callback)
-    return Component.TextInput(self._inner, label, placeholder, callback)
-end
-
-function Section:AddKeybind(label, default, callback)
-    return Component.Keybind(self._inner, label, default, callback)
-end
-
-function Section:AddButton(label, callback)
-    return Component.Button(self._inner, label, callback)
-end
-
-function Section:AddLabel(text)
-    return Component.Label(self._inner, text)
-end
-
-function Section:AddColorPicker(label, default, callback)
-    return Component.ColorPicker(self._inner, label, default, callback)
-end
-
--- ─── Tab ────────────────────────────────────────────────────────────────────
+-- ═══════════════════════════════════════════════════════════════════════════
+-- TAB  –  two-column layout
+-- ═══════════════════════════════════════════════════════════════════════════
 local Tab = {}
 Tab.__index = Tab
 
 function Tab.new(name)
     local self = setmetatable({}, Tab)
-    self.Name = name
+    self.Name  = name
 
-    -- Content scroll frame
-    self.ContentFrame = Util.Create("ScrollingFrame", {
-        Size            = UDim2.new(1, 0, 1, 0),
-        BackgroundTransparency = 1,
-        ScrollBarThickness = 2,
-        ScrollBarImageColor3 = COLORS.Border,
-        BorderSizePixel = 0,
-        AutomaticCanvasSize = Enum.AutomaticSize.Y,
-        CanvasSize      = UDim2.new(0, 0, 0, 0),
-        Visible         = false,
+    self.Frame = U.New("Frame", {
+        Size = UDim2.new(1, 0, 1, 0), BackgroundTransparency = 1, Visible = false,
     })
-    Util.AddPadding(self.ContentFrame, 8, 5, 8, 5)
-    Util.AddListLayout(self.ContentFrame, Enum.FillDirection.Vertical, 6)
+
+    local function makeCol(xPos, xSize)
+        local scroll = U.New("ScrollingFrame", {
+            Size = UDim2.new(xSize, 0, 1, 0), Position = UDim2.new(xPos, 0, 0, 0),
+            BackgroundTransparency = 1, BorderSizePixel = 0,
+            ScrollBarThickness = 2, ScrollBarImageColor3 = C.SectionBorder,
+            CanvasSize = UDim2.new(0, 0, 0, 0), AutomaticCanvasSize = Enum.AutomaticSize.Y,
+            Parent = self.Frame,
+        })
+        U.Pad(scroll, 5, 4, 5, 4)
+        U.List(scroll, Enum.FillDirection.Vertical, 5)
+        return scroll
+    end
+
+    -- left column 0 → 0.5, right 0.5 → 1.0 with 2px gap each side
+    self._left  = makeCol(0,    0.5)
+    self._right = makeCol(0.5,  0.5)
+
+    -- Center divider
+    U.New("Frame", {
+        Size = UDim2.new(0, 1, 1, -10), Position = UDim2.new(0.5, 0, 0, 5),
+        BackgroundColor3 = C.Divider, BorderSizePixel = 0, Parent = self.Frame,
+    })
 
     return self
 end
 
-function Tab:AddSection(title)
-    return Section.new(self.ContentFrame, title)
+-- column: "left" (default) or "right"
+function Tab:AddSection(title, column)
+    local col = (column == "right") and self._right or self._left
+    return Section.new(col, title)
 end
 
--- ─── Window ─────────────────────────────────────────────────────────────────
+-- ═══════════════════════════════════════════════════════════════════════════
+-- WINDOW
+-- ═══════════════════════════════════════════════════════════════════════════
 local Window = {}
 Window.__index = Window
 
-function Window.new(config)
-    local self = setmetatable({}, Window)
-    self._tabs      = {}
-    self._activeTab = nil
+local TAB_H   = 26
+local TITLE_H = 24
 
-    local title    = config.Title    or "UILibrary"
-    local size     = config.Size     or UDim2.new(0, 620, 0, 440)
-    local position = config.Position or UDim2.new(0.5, -310, 0.5, -220)
+function Window.new(cfg)
+    local self    = setmetatable({}, Window)
+    self._tabs    = {}
+    self._active  = nil
+
+    local title = cfg.Title    or "AniLib"
+    local size  = cfg.Size     or UDim2.new(0, 580, 0, 400)
+    local pos   = cfg.Position or UDim2.new(0.5, -290, 0.5, -200)
 
     -- ScreenGui
-    self._gui = Util.Create("ScreenGui", {
-        Name             = "UILibrary_" .. title,
-        ResetOnSpawn     = false,
-        ZIndexBehavior   = Enum.ZIndexBehavior.Sibling,
-        IgnoreGuiInset   = true,
+    self._gui = U.New("ScreenGui", {
+        Name = "AniLib_" .. title, ResetOnSpawn = false,
+        ZIndexBehavior = Enum.ZIndexBehavior.Sibling, IgnoreGuiInset = true,
     })
-
-    -- Try to parent to CoreGui (executor), fallback to PlayerGui
-    local ok, err = pcall(function()
-        self._gui.Parent = CoreGui
-    end)
-    if not ok then
+    if not pcall(function() self._gui.Parent = CoreGui end) then
         self._gui.Parent = LocalPlayer:WaitForChild("PlayerGui")
     end
 
-    -- Main frame
-    self._main = Util.Create("Frame", {
-        Name             = "MainFrame",
-        Size             = size,
-        Position         = position,
-        BackgroundColor3 = COLORS.Background,
-        BorderSizePixel  = 0,
-        Parent           = self._gui,
+    -- Full-screen overlay for dropdown portals (transparent, input passthrough)
+    local overlay = U.New("Frame", {
+        Size = UDim2.new(1, 0, 1, 0), BackgroundTransparency = 1, ZIndex = 99,
+        Parent = self._gui,
     })
-    Util.AddCorner(self._main, 5)
-    Util.AddStroke(self._main, COLORS.Border)
+    DropMgr:Init(overlay)
+
+    -- Main window
+    self._main = U.New("Frame", {
+        Name = "Window", Size = size, Position = pos,
+        BackgroundColor3 = C.WindowBg, BorderSizePixel = 0, ZIndex = 1,
+        Parent = self._gui,
+    })
+    U.Stroke(self._main, C.SectionBorder, 1)
 
     -- Title bar
-    local titleBar = Util.Create("Frame", {
-        Size            = UDim2.new(1, 0, 0, 28),
-        BackgroundColor3 = COLORS.TitleBar,
-        BorderSizePixel = 0,
-        Parent          = self._main,
+    local titleBar = U.New("Frame", {
+        Size = UDim2.new(1, 0, 0, TITLE_H), BackgroundColor3 = C.TitleBg, BorderSizePixel = 0, Parent = self._main,
     })
-    Util.AddCorner(titleBar, 5)
-    -- Mask bottom corners of title bar
-    Util.Create("Frame", {
-        Size            = UDim2.new(1, 0, 0, 10),
-        Position        = UDim2.new(0, 0, 1, -10),
-        BackgroundColor3 = COLORS.TitleBar,
-        BorderSizePixel = 0,
-        Parent          = titleBar,
+    U.Stroke(titleBar, C.SectionBorder, 1)
+    U.New("TextLabel", {
+        Size = UDim2.new(1, -30, 1, 0), Position = UDim2.new(0, 8, 0, 0),
+        BackgroundTransparency = 1, Text = title,
+        TextColor3 = C.TitleText, TextSize = FS, Font = FONT,
+        TextXAlignment = Enum.TextXAlignment.Left, Parent = titleBar,
+    })
+    local closeBtn = U.New("TextButton", {
+        Size = UDim2.new(0, 24, 1, 0), Position = UDim2.new(1, -24, 0, 0),
+        BackgroundTransparency = 1, Text = "×", TextColor3 = C.TextDim, TextSize = 16, Font = FONT,
+        Parent = titleBar,
+    })
+    closeBtn.MouseEnter:Connect(function()  U.Tween(closeBtn, { TextColor3 = Color3.fromRGB(255, 65, 65) }) end)
+    closeBtn.MouseLeave:Connect(function()  U.Tween(closeBtn, { TextColor3 = C.TextDim }) end)
+    closeBtn.MouseButton1Click:Connect(function() self._gui:Destroy() end)
+
+    -- Content area (between title bar and tab bar)
+    self._contentArea = U.New("Frame", {
+        Size = UDim2.new(1, 0, 1, -(TITLE_H + TAB_H)),
+        Position = UDim2.new(0, 0, 0, TITLE_H),
+        BackgroundTransparency = 1, ClipsDescendants = true,
+        Parent = self._main,
     })
 
-    Util.Create("TextLabel", {
-        Size            = UDim2.new(1, 0, 1, 0),
-        BackgroundTransparency = 1,
-        Text            = title,
-        TextColor3      = COLORS.TitleText,
-        TextSize        = 11,
-        Font            = FONTS.Regular,
-        Parent          = titleBar,
+    -- Tab bar (bottom)
+    self._tabBar = U.New("Frame", {
+        Size = UDim2.new(1, 0, 0, TAB_H), Position = UDim2.new(0, 0, 1, -TAB_H),
+        BackgroundColor3 = C.TabBar, BorderSizePixel = 0, Parent = self._main,
     })
-
-    -- Close button
-    local closeBtn = Util.Create("TextButton", {
-        Size            = UDim2.new(0, 28, 0, 28),
-        Position        = UDim2.new(1, -28, 0, 0),
-        BackgroundTransparency = 1,
-        Text            = "×",
-        TextColor3      = COLORS.TextDim,
-        TextSize        = 18,
-        Font            = FONTS.Regular,
-        Parent          = titleBar,
+    U.Stroke(self._tabBar, C.TabBorder, 1)
+    U.New("Frame", {   -- top border line
+        Size = UDim2.new(1, 0, 0, 1), BackgroundColor3 = C.TabBorder, BorderSizePixel = 0, Parent = self._tabBar,
     })
-    closeBtn.MouseButton1Click:Connect(function()
-        self._gui:Destroy()
-    end)
-    closeBtn.MouseEnter:Connect(function()
-        Util.Tween(closeBtn, { TextColor3 = Color3.fromRGB(255, 80, 80) })
-    end)
-    closeBtn.MouseLeave:Connect(function()
-        Util.Tween(closeBtn, { TextColor3 = COLORS.TextDim })
-    end)
-
-    -- Body (below title bar)
-    local body = Util.Create("Frame", {
-        Size            = UDim2.new(1, 0, 1, -28),
-        Position        = UDim2.new(0, 0, 0, 28),
-        BackgroundTransparency = 1,
-        Parent          = self._main,
+    self._tabHolder = U.New("Frame", {
+        Size = UDim2.new(1, 0, 1, 0), BackgroundTransparency = 1, Parent = self._tabBar,
     })
+    U.List(self._tabHolder, Enum.FillDirection.Horizontal, 0, Enum.HorizontalAlignment.Center)
 
-    -- Tab bar at bottom
-    self._tabBar = Util.Create("Frame", {
-        Size            = UDim2.new(1, 0, 0, 30),
-        Position        = UDim2.new(0, 0, 1, -30),
-        BackgroundColor3 = COLORS.TabBar,
-        BorderSizePixel = 0,
-        Parent          = body,
-    })
-    Util.AddStroke(self._tabBar, COLORS.Border)
-    -- separator line on top of tab bar
-    Util.Create("Frame", {
-        Size            = UDim2.new(1, 0, 0, 1),
-        BackgroundColor3 = COLORS.Border,
-        BorderSizePixel = 0,
-        Parent          = self._tabBar,
-    })
-
-    self._tabButtonContainer = Util.Create("Frame", {
-        Size            = UDim2.new(1, 0, 1, 0),
-        BackgroundTransparency = 1,
-        Parent          = self._tabBar,
-    })
-    Util.AddListLayout(self._tabButtonContainer, Enum.FillDirection.Horizontal, 0, Enum.HorizontalAlignment.Center)
-
-    -- Content area
-    self._contentArea = Util.Create("Frame", {
-        Size            = UDim2.new(1, 0, 1, -30),
-        BackgroundTransparency = 1,
-        ClipsDescendants = true,
-        Parent          = body,
-    })
-
-    -- Make draggable by title bar
-    Util.MakeDraggable(titleBar, self._main)
-
+    U.Drag(titleBar, self._main)
     return self
 end
 
 function Window:AddTab(name)
     local tab = Tab.new(name)
-    tab.ContentFrame.Parent = self._contentArea
+    tab.Frame.Parent = self._contentArea
     table.insert(self._tabs, tab)
 
-    -- Tab button
-    local tabCount   = #self._tabs
-    local btnWidth   = math.max(80, math.floor(self._main.AbsoluteSize.X / math.max(tabCount, 1)))
-
-    local tabBtn = Util.Create("TextButton", {
-        Size            = UDim2.new(0, 100, 1, 0),
-        BackgroundTransparency = 1,
-        Text            = name,
-        TextColor3      = COLORS.TabText,
-        TextSize        = 11,
-        Font            = FONTS.Regular,
-        Parent          = self._tabButtonContainer,
+    local tabBtn = U.New("TextButton", {
+        Size = UDim2.new(0, 90, 1, 0), BackgroundTransparency = 1,
+        Text = name, TextColor3 = C.TabText, TextSize = FS, Font = FONT,
+        Parent = self._tabHolder,
     })
-
-    -- Underline indicator
-    local underline = Util.Create("Frame", {
-        Size            = UDim2.new(1, -20, 0, 1),
-        Position        = UDim2.new(0, 10, 1, -1),
-        BackgroundColor3 = COLORS.TabUnderline,
-        BackgroundTransparency = 1,
-        BorderSizePixel = 0,
-        Parent          = tabBtn,
+    local ul = U.New("Frame", {
+        Size = UDim2.new(1, -16, 0, 1), Position = UDim2.new(0, 8, 1, -1),
+        BackgroundColor3 = C.TabUnderline, BackgroundTransparency = 1, BorderSizePixel = 0,
+        Parent = tabBtn,
     })
+    tab._btn = tabBtn; tab._ul = ul
 
-    tab._tabBtn     = tabBtn
-    tab._underline  = underline
+    tabBtn.MouseButton1Click:Connect(function() self:_select(tab) end)
+    tabBtn.MouseEnter:Connect(function() if self._active ~= tab then U.Tween(tabBtn, { TextColor3 = C.TabTextOn }) end end)
+    tabBtn.MouseLeave:Connect(function() if self._active ~= tab then U.Tween(tabBtn, { TextColor3 = C.TabText  }) end end)
 
-    tabBtn.MouseButton1Click:Connect(function()
-        self:_selectTab(tab)
-    end)
-
-    tabBtn.MouseEnter:Connect(function()
-        if self._activeTab ~= tab then
-            Util.Tween(tabBtn, { TextColor3 = COLORS.TabTextActive })
-        end
-    end)
-    tabBtn.MouseLeave:Connect(function()
-        if self._activeTab ~= tab then
-            Util.Tween(tabBtn, { TextColor3 = COLORS.TabText })
-        end
-    end)
-
-    -- Auto-select first tab
-    if #self._tabs == 1 then
-        self:_selectTab(tab)
-    end
-
+    if #self._tabs == 1 then self:_select(tab) end
     return tab
 end
 
-function Window:_selectTab(tab)
-    -- Deselect all
+function Window:_select(tab)
+    DropMgr:Close()
     for _, t in ipairs(self._tabs) do
-        t.ContentFrame.Visible = false
-        Util.Tween(t._tabBtn,    { TextColor3 = COLORS.TabText })
-        Util.Tween(t._underline, { BackgroundTransparency = 1 })
+        t.Frame.Visible = false
+        U.Tween(t._btn, { TextColor3 = C.TabText })
+        U.Tween(t._ul,  { BackgroundTransparency = 1 })
     end
-    -- Select target
-    tab.ContentFrame.Visible = true
-    self._activeTab = tab
-    Util.Tween(tab._tabBtn,    { TextColor3 = COLORS.TabTextActive })
-    Util.Tween(tab._underline, { BackgroundTransparency = 0 })
+    tab.Frame.Visible = true
+    self._active = tab
+    U.Tween(tab._btn, { TextColor3 = C.TabTextOn })
+    U.Tween(tab._ul,  { BackgroundTransparency = 0 })
 end
 
-function Window:Destroy()
-    self._gui:Destroy()
+function Window:Destroy() self._gui:Destroy() end
+
+-- ═══════════════════════════════════════════════════════════════════════════
+-- EXPORT
+-- ═══════════════════════════════════════════════════════════════════════════
+local Lib = {}
+Lib.__index = Lib
+Lib.Colors  = C
+
+function Lib:CreateWindow(config)
+    return Window.new(config or {})
 end
 
--- ─── Public API ─────────────────────────────────────────────────────────────
-function UILibrary:CreateWindow(config)
-    return Window.new(config)
-end
-
--- Convenience: expose component builders for advanced use
-UILibrary.Component = Component
-UILibrary.Colors    = COLORS
-
-return UILibrary
+return Lib
