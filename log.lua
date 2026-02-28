@@ -190,7 +190,7 @@ local function buildGui()
     Ovoline.TextScaled             = true
     Ovoline.BackgroundTransparency = 1
     Ovoline.BorderSizePixel        = 0
-    Ovoline.Position               = UDim2.new(0.121, 0, 0.858, 0)
+    Ovoline.Position               = UDim2.new(0.124, 0, 0.858, 0)
     Ovoline.Size                   = UDim2.new(0, 77, 0, 32)
     Ovoline.ZIndex                 = 3
     Ovoline.Parent                 = Cont
